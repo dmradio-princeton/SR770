@@ -80,6 +80,7 @@ class SR770:
 
 
 if __name__ == '__main__':
+	print("test")
 	dev = SR770()
 	dev.initial()
 	dev.measure_psd()
