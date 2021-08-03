@@ -1,8 +1,0 @@
-README.md
-setup.py
-SR770.egg-info/PKG-INFO
-SR770.egg-info/SOURCES.txt
-SR770.egg-info/dependency_links.txt
-SR770.egg-info/top_level.txt
-src/__init__.py
-src/sr770.py

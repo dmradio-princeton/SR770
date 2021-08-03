@@ -60,7 +60,7 @@ class SR770:
 
 			self.serial.write(f'MBIN -1, {i}\n'.encode())  # move the trace marker region to i=0 bin
 
-		dir_path = 'data'
+		dir_path = 'src/data'
 		if not os.path.exists(dir_path):
 			os.makedirs(dir_path)
 
