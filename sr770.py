@@ -38,7 +38,13 @@ class SR770:
 		self.serial.write(b'SPAN 19\n')  # set the entire frequency span = 100kHz
 		self.serial.write(b'MEAS -1, 1\n')  # set the measurement type to PSD
 		self.serial.write(b'MBIN -1, 0\n')  # move the trace marker region to i=0 bin
-		for i in range(400):
+
+		self.serial.write(f'SPEC? -1')
+		data = self.serial.readline()
+		print(data)
+
+
+		'''for i in range(400):
 			self.serial.write(f'BVAL? -1, {i}\n'.encode())  # measure marker X position
 			c = ''
 			s_x = ''
@@ -57,7 +63,7 @@ class SR770:
 
 			new_data = np.array([[float(str(s_x).rstrip()), float(str(s_y).rstrip())]])
 			data = np.append(data, new_data, axis=0)
-
+			
 			self.serial.write(f'MBIN -1, {i}\n'.encode())  # move the trace marker region to i=0 bin
 
 		dir_path = 'src/data'
@@ -75,7 +81,7 @@ class SR770:
 
 		plt.plot(data[:, 0], data[:, 1])
 		plt.yscale('log')
-		plt.savefig('data.pdf')
+		plt.savefig('data.pdf')'''
 
 
 if __name__ == '__main__':
