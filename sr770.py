@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import os
-import sys
+import shutil
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+
 import serial
 
 
@@ -21,6 +23,8 @@ class SR770:
 			serial.EIGHTBITS,
 			serial.PARITY_NONE)
 
+		self.freq_array = np.linspace(250, 100000, 400, dtype=float)
+
 	def initial(self):
 		self.serial.write(f'OUTP 0\n'.encode())  # sets the output interface to RS232
 		self.serial.write(f'*IDN?\n'.encode())  # queries the device identification
@@ -32,61 +36,64 @@ class SR770:
 			s += c.decode()
 		print(s)
 
-	def measure_psd(self):
-		data = np.empty((0, 2))
+	def clear(self):
+		self.serial.write(f'*CLS\n'.encode())
 
+	def measure_psd_full(self):
 		self.serial.write(b'SPAN 19\n')  # set the entire frequency span = 100kHz
 		self.serial.write(b'MEAS -1, 1\n')  # set the measurement type to PSD
 		self.serial.write(b'MBIN -1, 0\n')  # move the trace marker region to i=0 bin
 
-		self.serial.write(f'SPEC? -1')
-		data = self.serial.readline()
-		print(data)
+		self.serial.write(b'SPEC? -1')
+		data = self.serial.read_until(b'\r').decode()
+		data_list = list(data.split(","))[:-1]
+		data_array = np.array(data_list, dtype=float)
 
+		psd_full = np.vstack((self.freq_array, data_array)).T
 
-		'''for i in range(400):
-			self.serial.write(f'BVAL? -1, {i}\n'.encode())  # measure marker X position
-			c = ''
-			s_x = ''
-			while c != b'\r':
-				c = self.serial.read(1)
-				s_x += c.decode()
+		shutil.rmtree('output')
+		os.makedirs('output')
 
-			sys.stdout.write("{}".format(s_x))
+		data_frame = pd.DataFrame(psd_full, columns=['Frequency, Hz', 'PSD, V_rms/sqrt(Hz)'])
+		data_frame.to_csv('output/psd.csv')
+		plt.plot(psd_full[:, 0], psd_full[:, 1])
+		plt.yscale('log')
+		plt.savefig('output/psd.pdf')
 
+	def measure_psd_range(self, freq1, freq2):
+		n1 = np.absolute(self.freq_array-freq1).argmin()
+		n2 = np.absolute(self.freq_array-freq2).argmin()
+
+		print(self.freq_array[n1])
+		print(self.freq_array[n2])
+
+		data_array = np.empty((0, 1), dtype=float)
+		for i in range(n1, n2+1):
 			self.serial.write(f'SPEC? -1, {i}\n'.encode())  # measure marker Y position
 			c = ''
-			s_y = ''
+			s = ''
 			while c != b'\r':
 				c = self.serial.read(1)
-				s_y += c.decode()
+				s += c.decode()
 
-			new_data = np.array([[float(str(s_x).rstrip()), float(str(s_y).rstrip())]])
-			data = np.append(data, new_data, axis=0)
+			data_array = np.append(data_array, float(str(s)))
 			
 			self.serial.write(f'MBIN -1, {i}\n'.encode())  # move the trace marker region to i=0 bin
 
-		dir_path = 'src/data'
-		if not os.path.exists(dir_path):
-			os.makedirs(dir_path)
+		psd_range = np.vstack((self.freq_array[n1:n2+1], data_array)).T
 
-		file_path = os.path.join(dir_path, 'spectrum.dat')
+		shutil.rmtree('output')
+		os.makedirs('output')
 
-		file = open(file_path, 'w')
-
-		# write the data to a file
-		for i in range(400):
-			file.write(str(data[i, 0]) + " " + str(data[i, 1]) + "\n")
-		file.close()
-
-		plt.plot(data[:, 0], data[:, 1])
+		data_frame = pd.DataFrame(psd_range, columns=['Frequency, Hz', 'PSD, V_rms/sqrt(Hz)'])
+		data_frame.to_csv('output/psd.csv')
+		plt.plot(psd_range[:, 0], psd_range[:, 1])
 		plt.yscale('log')
-		plt.savefig('data.pdf')'''
+		plt.savefig('output/psd.pdf')
 
 
 if __name__ == '__main__':
 	dev = SR770()
-	dev.initial()
-	dev.measure_psd()
-
+	dev.clear()
+	dev.measure_psd_range(0, 100000)
 	dev.serial.close()  # close the serial port
